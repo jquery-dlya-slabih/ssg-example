@@ -18,7 +18,7 @@ const routesForSSG = [
     routePath: '/',
     fileName: '/index.html'
   },
-  ...[1,2,3,4,5].map(id => ({
+  ...[1, 2, 3, 4, 5].map((id) => ({
     routePath: `/products/${id}`,
     fileName: `/products/${id}/index.html`
   }))
