@@ -68,7 +68,7 @@ function render() {
 
     const t1 = performance.now();
 
-    console.info(`✅ ${fileName} processed in ${Math.round(t1 - t0)}ms`);
+    console.info(`✅  ${fileName} processed in ${Math.round(t1 - t0)}ms`);
   });
 }
 
