@@ -1,9 +1,8 @@
 import type { RouteObject } from 'react-router';
 import type { QueryClient } from '@tanstack/react-query';
+import { lazy } from 'react';
 
 import Layout from '@/components/layout';
-import MainPage from '@/pages/main';
-import ProductPage from '@/pages/product';
 import { productsQuery, productQuery } from '@/queries.ts';
 
 const createRoutes = (queryClient: QueryClient): RouteObject[] => {
@@ -14,7 +13,7 @@ const createRoutes = (queryClient: QueryClient): RouteObject[] => {
       children: [
         {
           index: true,
-          Component: MainPage,
+          Component: lazy(() => import('@/pages/main')),
           loader: async () => {
             if (import.meta.env.SSR) {
               await queryClient.prefetchQuery(productsQuery());
@@ -23,7 +22,7 @@ const createRoutes = (queryClient: QueryClient): RouteObject[] => {
         },
         {
           path: '/products/:id',
-          Component: ProductPage,
+          Component: lazy(() => import('@/pages/product')),
           loader: async ({ params }) => {
             if (import.meta.env.SSR) {
               await queryClient.prefetchQuery(productQuery(params.id));

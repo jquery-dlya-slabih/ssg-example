@@ -2,8 +2,9 @@ import { QueryClientProvider, dehydrate, HydrationBoundary, QueryClient } from '
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import fs from 'node:fs';
 import path from 'node:path';
+import { Writable } from 'node:stream';
 import { StrictMode } from 'react';
-import { renderToString } from 'react-dom/server';
+import { renderToPipeableStream } from 'react-dom/server';
 import serialize from 'serialize-javascript';
 import { createStaticHandler, createStaticRouter, StaticRouterProvider } from 'react-router';
 import type { StaticHandlerContext } from 'react-router';
@@ -38,37 +39,53 @@ function render() {
     const { query, dataRoutes } = createStaticHandler(routes);
     const context = (await query(request)) as StaticHandlerContext;
     const router = createStaticRouter(dataRoutes, context);
-    const rqs = dehydrate(queryClient);
+    const state = dehydrate(queryClient);
 
-    const htmlString = renderToString(
+    const { pipe } = renderToPipeableStream(
       <StrictMode>
         <QueryClientProvider client={queryClient}>
-          <HydrationBoundary state={rqs}>
+          <HydrationBoundary state={state}>
             <StaticRouterProvider router={router} context={context} />
             <ReactQueryDevtools />
           </HydrationBoundary>
         </QueryClientProvider>
-      </StrictMode>
+      </StrictMode>,
+      {
+        onAllReady() {
+          const chunks: string[] = [];
+          const writeable = new Writable({
+            write(chunk, _encoding, callback) {
+              chunks.push(chunk.toString());
+              callback();
+            }
+          });
+
+          writeable.on('finish', () => {
+            const [head, body] = chunks.join('').split(HTML_DIVIDER);
+            const rqs = serialize(state);
+
+            const html = template
+              .replace('<!--head-outlet-->', head)
+              .replace('<!--ssg-outlet-->', body)
+              .replace('<!--rqs-outlet-->', `window.__REACT_QUERY_STATE__ = ${rqs};`);
+
+            const folder = path.resolve(`${outDir}${fileName.replace('index.html', '')}`);
+
+            if (!fs.existsSync(folder)) {
+              fs.mkdirSync(folder, { recursive: true });
+            }
+
+            fs.writeFileSync(path.resolve(`${outDir}${fileName}`), html);
+
+            const t1 = performance.now();
+
+            console.info(`✅  ${fileName} processed in ${Math.round(t1 - t0)}ms`);
+          });
+
+          pipe(writeable);
+        }
+      }
     );
-
-    const [head, body] = htmlString.split(HTML_DIVIDER);
-
-    const html = template
-      .replace('<!--head-outlet-->', head)
-      .replace('<!--ssg-outlet-->', body)
-      .replace('<!--rqs-outlet-->', `window.__REACT_QUERY_STATE__ = ${serialize(rqs)};`);
-
-    const folder = path.resolve(`${outDir}${fileName.replace('index.html', '')}`);
-
-    if (!fs.existsSync(folder)) {
-      fs.mkdirSync(folder, { recursive: true });
-    }
-
-    fs.writeFileSync(path.resolve(`${outDir}${fileName}`), html);
-
-    const t1 = performance.now();
-
-    console.info(`✅ ${fileName} processed in ${Math.round(t1 - t0)}ms`);
   });
 }
 
