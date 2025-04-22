@@ -6,7 +6,6 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 export default defineConfig(({ isSsrBuild }) => {
   if (isSsrBuild) {
     return {
-      base: '/',
       build: {
         outDir: 'dist/server',
         copyPublicDir: false
@@ -15,7 +14,6 @@ export default defineConfig(({ isSsrBuild }) => {
     };
   } else {
     return {
-      base: '/',
       plugins: [tsconfigPaths(), tailwindcss(), react()]
     };
   }
