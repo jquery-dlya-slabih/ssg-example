@@ -25,7 +25,7 @@ const routesForSSG = [
 ];
 
 function render() {
-  const template = fs.readFileSync('dist/index.html', 'utf-8');
+  const template = fs.readFileSync(`${outDir}/index.html`, 'utf-8');
 
   routesForSSG.forEach(async ({ routePath, fileName }) => {
     console.info(`♻️ generating ${fileName}`);
